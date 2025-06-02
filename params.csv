@@ -1,0 +1,23 @@
+#name,value,fit,bounds,label,unit,truth
+#companion b astrophysical params,,,,,,
+b_rr,0.05580,1,uniform 0.05250 0.06050,$R_b / R_\star$,,0.1
+b_rsuma,0.182,1,uniform 0.1300 0.1980,$(R_\star + R_b) / a_b$,,0.11
+b_cosi,0.113,1,uniform 0 1,$\cos{i_b}$,,0.01745
+b_epoch,2459798.51786,1,uniform 2459798.51600 2459798.51950,$T_{0;b}$,BJD,1.1
+b_period, 3.7246871 ,1,uniform 3.7246700 3.7247100,$P_b$,days,3.4
+b_K, 8.67898,1,uniform 5 10,$K_b$,km/s,0.1
+b_f_c,0,1,uniform -2.5 2.5,$\sqrt{e}\cos{\omega}_b$,,0.1
+b_f_s,0,1,uniform -2.5 2.5,$\sqrt{e}\sin{\omega}_b$,,0.44
+#limb darkening coefficients per instrument,,,,,,
+host_ldc_q1_TESS,0.63,1,uniform -3 3,$q_{1; \mathrm{TESS}}$,,0.64
+host_ldc_q2_TESS,0.76,1,uniform -1.50 1.50,$q_{2; \mathrm{TESS}}$,,0.38
+#errors per instrument,,,,,,
+ln_err_flux_TESS,-6.408,1,uniform -7.2 0,$\log{\sigma_\mathrm{TESS}}$,$\log{ \mathrm{rel. flux.} }$,
+log_jitter_rv_Raphael,-1.11,1,uniform -4 0,$\ln{\sigma_\mathrm{jitter}} (RV_\mathrm{TRES})$,km/s,-6.2
+#baseline per instrument,,,,,,
+baseline_offset_rv_Raphael,-1.5,1,uniform -2.5 1.5,$\Delta_{TRES}$,,
+baseline_gp_offset_flux_TESS,0,1,uniform -0.1 0.1,$\mathrm{gp \ln \sigma (TESS)}$,,
+baseline_gp_matern32_lnsigma_flux_TESS,-8.05,1,uniform -9 -3.5,$\mathrm{gp \ln \sigma (TESS)}$,,
+baseline_gp_matern32_lnrho_flux_TESS,-2.79,1,uniform -4.8 -1.6,$\mathrm{gp \ln \rho (TESS)}$,,
+
+
