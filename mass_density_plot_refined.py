@@ -1,14 +1,12 @@
-import os
-import numpy as np
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import seaborn as sns
 from matplotlib import rcParams
 
 # ---------------------------
-# Set Plotting Aesthetics
+# Plot Aesthetics
 # ---------------------------
+# plt.style.use('dark_background')
 params = {
     'legend.fontsize': 12,
     'axes.labelsize': 12,
@@ -28,105 +26,248 @@ rcParams.update(params)
 # ---------------------------
 # Load Data
 # ---------------------------
-data = pd.read_csv("browndwarf_final_earlier.csv")
+browndwarf_file = 'browndwarf_list_with_density_asymmetric.csv'
+df = pd.read_csv(browndwarf_file)
+
+# Extract columns
+mass = df['Mj']
+
+
+density = df['Density_cgs']
+density_err_upper = df['Density_err_upper_cgs']
+density_err_lower = df['Density_err_lower_cgs']
+radius = df['Rj']
+temperature = df['Teff']
 
 # ---------------------------
-# Calculate Density Uncertainty
+# Plotting
 # ---------------------------
-mass = data['mass_intermsof_jupitermass']
-radius = data['radius_intermsof_jupiterradius']
-mass_unc = data['massuncertainity_intermsof_jupitermass']
-radius_unc = data['radiusuncertainity_intermsof_jupiterradius']
-density = data['Density']
-temp = data['TEMP']
+fig, ax = plt.subplots(figsize=(14, 10))
 
-# Propagate error: fractional uncertainties added, radius cubed → multiply radius term by 3
-density_unc = ((mass_unc / mass) + 3 * (radius_unc / radius)) * density
-
-# Append density uncertainty to DataFrame
-data['density_uncertainity'] = density_unc
-
-# ---------------------------
-# Prepare Arrays for Plotting
-# ---------------------------
-m = mass.to_numpy()
-d = density.to_numpy()
-r = radius.to_numpy()
-t = temp.to_numpy()
-
-# ---------------------------
-# Begin Plotting
-# ---------------------------
-fig, ax = plt.subplots(figsize=(10, 8))
-
-# Main scatter plot with temperature as color and radius as size
 scatter = ax.scatter(
-    m, d,
+    mass, density,
     edgecolors='none',
-    s=r * 40,            # Scale point size with radius
-    c=t,                 # Color by temperature
+    s=radius * 25,  # size scaled by radius
+    c=temperature,
     cmap='jet',
     alpha=0.9
 )
 
-# Colorbar setup
+# Colorbar
 clb = plt.colorbar(scatter, ax=ax, orientation='vertical')
 clb.set_label('Temperature (K)', labelpad=15, rotation=270)
 
-# Add error bars
+# Asymmetric error bars
 ax.errorbar(
-    x=m,
-    y=d,
-    yerr=data['density_uncertainity'],
-    xerr=mass_unc,
+    mass,
+    density,
+    xerr=[df['Mj_err2'], df['Mj_err1']],  # lower and upper errors for mass
+    yerr=[density_err_lower, density_err_upper],
     linestyle='None',
-    color='k',
-    alpha=0.4,
+    color='gray',
+    alpha=0.7,
     capsize=5
 )
-
-# Axis labels and limits
+ 
+# Labels and limits
 ax.set_xlabel('Mass [$M_{J}$]')
 ax.set_ylabel('Density [g cm$^{-3}$]')
 ax.set_xlim(0, 120)
-ax.set_ylim(-30, max(d) + 70)  # Add padding above data
+ax.set_ylim(-30, max(density + density_err_upper)*1.1)
 
-# ---------------------------
-# Reference Lines and Annotations
-# ---------------------------
-ax.axvline(x=94, color='red', linestyle='--')  # Division between BDs and low-mass stars
-ax.text(10, 125, 'Brown dwarfs', fontsize=10, fontweight='bold')
-ax.text(94.5, 75, 'Low mass stars', fontsize=10, fontweight='bold')
+# Reference vertical line at 94 Mj
+ax.axvline(x=12, color='red', linestyle='--')
+ax.axvline(x=42, color='red', linestyle='--')
+ax.axvline(x=84, color='red', linestyle='--')
+ax.text(13, max(density) + 45, 'Low-mass Brown dwarfs', fontsize=13, fontweight='bold')
+ax.text(45, max(density) +45, 'Massive Brown dwarfs', fontsize=13, fontweight='bold')
+ax.text(86, max(density) + 45, 'Low Mass Stars', fontsize=13, fontweight='bold')
 
-# Annotate TOI-2155b with arrow and label
-ax.annotate(
-    '',
-    xy=(81, 121),       # Arrowhead
-    xytext=(90, 160),   # Start of arrow
-    arrowprops=dict(arrowstyle='->', color='red', linewidth=2)
+# Annotate TOI-2155b if present
+if 'TOI-2155b' in df['Name'].values:
+    idx = df[df['Name'] == 'TOI-2155b'].index[0]
+    # Plot TOI-2155b with a special marker and colormap color
+    toi_color = plt.cm.jet((temperature[idx] - min(temperature)) / (max(temperature) - min(temperature)))
+
+    
+    
+    ax.scatter(
+    mass[idx], density[idx],
+    s=radius[idx] * 25,
+    color=toi_color,  # color following temperature color bar
+    marker='o',
+
+    linewidths=1.2,
+    zorder=5
 )
-ax.text(81, 127, 'TOI-2155b', fontsize=8, fontweight='bold', ha='center')
 
-# ---------------------------
-# Custom Radius Size Legend
-# ---------------------------
-desired_radii = np.array([0.5, 0.7, 0.8, 0.9, 1, 2, 3])  # Radii in Jupiter units
-# Convert to plot size scale (based on original scaling)
-desired_sizes = (desired_radii / 11.21) * 490
+# Overlay the 'x' marker
+    ax.scatter(
+        mass[idx], density[idx],
+        s=radius[idx] * 20,  # slightly smaller so it sits nicely inside the circle
+        color='red',
+        marker='x',
+        linewidths=1.5,
+        zorder=6,
+        label='TOI-2155b'
+    )
+    
 
-# Create dummy handles for legend
+    ax.annotate(
+        '',
+        xy=(mass[idx], density[idx]),
+        xytext=(mass[idx] + 4, density[idx] + (max(density)*0.15)),
+        arrowprops=dict(arrowstyle='->', color='red', linewidth=2)
+    )
+    ax.text(mass[idx], density[idx] + (max(density)*0.1), 'TOI-2155b', fontsize=8, fontweight='bold', ha='center')
+
+# Radius size legend
+desired_radii = np.array([0.5, 0.7, 0.9, 1.0, 1.5, 2.0,3.0])
+desired_sizes = desired_radii * 40
+
 handles = [
-    plt.scatter([], [], s=size, edgecolor='none', c='k', alpha=0.6)
+    plt.scatter([], [], s=size, edgecolor='none', c='gray', alpha=0.6)
     for size in desired_sizes
 ]
-labels = [f'{radius} $R_J$' for radius in desired_radii]
+labels = [f'{r} $R_J$' for r in desired_radii]
 
-# Draw legend on plot
-legend = ax.legend(handles, labels, loc="upper right", title="Radius [$R_{J}$]", fontsize=12)
+ax.legend(handles, labels, loc="upper right", title="Radius [$R_{J}$]", fontsize=12)
 
-# ---------------------------
-# Save and Show
-# ---------------------------
-plt.savefig('mass_density_plot.png', format='png', dpi=400, bbox_inches='tight')
+plt.tight_layout()
+#plt.savefig('brown_dwarf_density_plot_dark.png', dpi=300, bbox_inches='tight')
 plt.show()
 
+
+
+#import os
+#import numpy as np
+#import pandas as pd
+#import matplotlib.pyplot as plt
+#import matplotlib.ticker as ticker
+#import seaborn as sns
+#from matplotlib import rcParams
+#plt.style.use('dark_background')
+## ---------------------------
+## Set Plotting Aesthetics
+## ---------------------------
+#params = {
+#    'legend.fontsize': 12,
+#    'axes.labelsize': 12,
+#    'axes.titlesize': 12,
+#    'xtick.labelsize': 12,
+#    'ytick.labelsize': 12,
+#    'grid.color': 'k',
+#    'grid.linestyle': ':',
+#    'grid.linewidth': 0.5,
+#    'mathtext.fontset': 'stix',
+#    'mathtext.rm': 'DejaVu serif',
+#    'font.family': 'DejaVu serif',
+#    'font.serif': 'Times New Roman',
+#}
+#rcParams.update(params)
+#
+## ---------------------------
+## Load Data
+## ---------------------------
+#data = pd.read_csv("browndwarf_final_earlier.csv")
+#
+## ---------------------------
+## Calculate Density Uncertainty
+## ---------------------------
+#mass = data['mass_intermsof_jupitermass']
+#radius = data['radius_intermsof_jupiterradius']
+#mass_unc = data['massuncertainity_intermsof_jupitermass']
+#radius_unc = data['radiusuncertainity_intermsof_jupiterradius']
+#density = data['Density']
+#temp = data['TEMP']
+#
+## Propagate error: fractional uncertainties added, radius cubed → multiply radius term by 3
+#density_unc = ((mass_unc / mass) + 3 * (radius_unc / radius)) * density
+#
+## Append density uncertainty to DataFrame
+#data['density_uncertainity'] = density_unc
+#
+## ---------------------------
+## Prepare Arrays for Plotting
+## ---------------------------
+#m = mass.to_numpy()
+#d = density.to_numpy()
+#r = radius.to_numpy()
+#t = temp.to_numpy()
+#
+## ---------------------------
+## Begin Plotting
+## ---------------------------
+#fig, ax = plt.subplots(figsize=(10, 8))
+#
+## Main scatter plot with temperature as color and radius as size
+#scatter = ax.scatter(
+#    m, d,
+#    edgecolors='none',
+#    s=r * 40,            # Scale point size with radius
+#    c=t,                 # Color by temperature
+#    cmap='jet',
+#    alpha=0.9
+#)
+#
+## Colorbar setup
+#clb = plt.colorbar(scatter, ax=ax, orientation='vertical')
+#clb.set_label('Temperature (K)', labelpad=15, rotation=270)
+#
+## Add error bars
+#ax.errorbar(
+#    x=m,
+#    y=d,
+#    yerr=data['density_uncertainity'],
+#    xerr=mass_unc,
+#    linestyle='None',
+#    color='gray',
+#    alpha=0.4,
+#    capsize=5
+#)
+#
+## Axis labels and limits
+#ax.set_xlabel('Mass [$M_{J}$]')
+#ax.set_ylabel('Density [g cm$^{-3}$]')
+#ax.set_xlim(0, 120)
+#ax.set_ylim(-30, max(d) + 70)  # Add padding above data
+#
+## ---------------------------
+## Reference Lines and Annotations
+## ---------------------------
+#ax.axvline(x=94, color='red', linestyle='--')  # Division between BDs and low-mass stars
+#ax.text(10, 125, 'Brown dwarfs', fontsize=10, fontweight='bold')
+#ax.text(94.5, 75, 'Low mass stars', fontsize=10, fontweight='bold')
+#
+## Annotate TOI-2155b with arrow and label
+#ax.annotate(
+#    '',
+#    xy=(81, 111),       # Arrowhead
+#    xytext=(90, 150),   # Start of arrow
+#    arrowprops=dict(arrowstyle='->', color='red', linewidth=2)
+#)
+#ax.text(81, 127, 'TOI-2155b', fontsize=8, fontweight='bold', ha='center')
+#
+## ---------------------------
+## Custom Radius Size Legend
+## ---------------------------
+#desired_radii = np.array([0.5, 0.7, 0.8, 0.9, 1, 2, 3])  # Radii in Jupiter units
+## Convert to plot size scale (based on original scaling)
+#desired_sizes = (desired_radii / 11.21) * 490
+#
+## Create dummy handles for legend
+#handles = [
+#    plt.scatter([], [], s=size, edgecolor='none', c='gray', alpha=0.6)
+#    for size in desired_sizes
+#]
+#labels = [f'{radius} $R_J$' for radius in desired_radii]
+#
+## Draw legend on plot
+#legend = ax.legend(handles, labels, loc="upper right", title="Radius [$R_{J}$]", fontsize=12)
+#
+## ---------------------------
+## Save and Show
+## ---------------------------
+#plt.savefig('mass_density_plot.png', format='png', dpi=400, bbox_inches='tight')
+#plt.show()
+#
