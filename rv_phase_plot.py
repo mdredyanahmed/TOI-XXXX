@@ -1,12 +1,29 @@
 # === Import required libraries ===
 from PyAstronomy.pyasl import foldAt         # For folding time-series data on a given period
 import numpy as np                           # For numerical operations
-import pandas as pd                          # For reading and manipulating CSV data
+import pandas as pd                          # For reading CSV data
+import matplotlib as mpl
 import matplotlib.pyplot as plt              # For plotting
 from matplotlib import gridspec              # For more customizable subplot layout
 
-
-
+# === Plot style for publication ===
+mpl.rcParams.update({
+    'font.size': 14,
+    'font.family': 'serif',
+    'axes.labelsize': 16,
+    'axes.titlesize': 18,
+    'xtick.labelsize': 14,
+    'ytick.labelsize': 14,
+    'legend.fontsize': 11.5,
+    'axes.linewidth': 1.2,
+    'xtick.direction': 'out',
+    'ytick.direction': 'out',
+    'xtick.top': True,
+    'ytick.right': True,
+    'grid.alpha': 0.3,
+    'grid.linestyle': '--'
+})
+#plt.style.use('dark_background')
 
 # === Load and prepare radial velocity data ===
 data = pd.read_csv("Raphael.csv")            # Read RV data from CSV
@@ -19,7 +36,7 @@ flux = data['RV']
 flux_err = data['RV_err']
 
 # === Phase-fold the data using known period and T0 ===
-phases = foldAt(time, 3.7246957, T0=2459891.63471)  # Period and T0 from your fit
+phases = foldAt(time, 3.7246960, T0=2459891.63476)  # Period and T0 from your fit
 
 # Sort data by phase for clean plotting
 sortIndi = np.argsort(phases)
@@ -28,19 +45,21 @@ flux = flux[sortIndi]
 flux_err = flux_err[sortIndi]
 
 # === Load the model and residuals from CSV ===
-modelcsv = pd.read_csv("RV_model.csv")
+modelcsv = pd.read_csv("RV_model_test.csv")
 model = modelcsv['model']
 modeltime = modelcsv['model_time']
 baseline = modelcsv['baseline']
 residuals = modelcsv['residuals']
+RV_corrected=flux-baseline
+flux = RV_corrected[sortIndi]
 
 # === Fold the model data using same period and T0 ===
-phase_model = foldAt(modeltime, 3.7246957, T0=2459891.63471)
+phase_model = foldAt(modeltime, 3.7246960, T0=2459891.63476)
 
 # Sort model and residuals by phase
 sortIndi2 = np.argsort(phase_model)
 phase_model = phase_model[sortIndi2]
-model = model[sortIndi2] + baseline[sortIndi2]  # Combine model and baseline
+model = model[sortIndi2]  # Combine model and baseline
 residuals = residuals[sortIndi2]
 
 # === Start plotting ===
@@ -51,26 +70,25 @@ gs = gridspec.GridSpec(2, 1, height_ratios=[5, 2])  # Two vertically stacked sub
 ax0 = plt.subplot(gs[0])
 ax0.plot(phase_model, model, 'r', alpha=1, label="Model (GP Matérn 3/2)", zorder=2)
 ax0.errorbar(phases, flux, flux_err, fmt='b.', alpha=1, label="Data (TRES)",
-             markersize=5, capsize=2, zorder=1)
+             markersize=3, capsize=2, zorder=1)
 
-ax0.set_ylabel("Radial Velocity [km/s]", fontsize=12)
-ax0.legend(ncol=2, loc='upper left', fontsize=12)
+ax0.set_ylabel("Radial Velocity - Baseline [km/s]")
+ax0.legend(ncol=2, loc='upper left')
 
 # --- Bottom plot: Residuals ---
 ax1 = plt.subplot(gs[1])
 residuals = residuals[sortIndi]  # Match residuals to data phase order
-ax1.scatter(phases, residuals, c='b', label='Residuals', alpha=0.6)
+ax1.errorbar(phases, residuals, flux_err, fmt='b.', alpha=1,  markersize=3, capsize=2)
+#ax1.scatter(phases, residuals, c='b', label='Residuals', alpha=0.6)
 ax1.axhline(0, color='grey', linestyle='--')  # Horizontal line at 0 for reference
 
-ax1.set_xlabel("Phase", fontsize=12) 
-ax1.set_ylabel("Residuals", fontsize=12)
+ax1.set_xlabel("Phase")
+ax1.set_ylabel("Residuals")
 
 # === Final adjustments ===
 plt.tight_layout()
 plt.savefig('RVplot_phase.png', dpi=400)  # Save figure as high-res image
 plt.show()                                # Display the plot
-
-
 
 
 
