@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # === Light background plot ===
-plt.style.use('dark_background')  # Clean white background, no gridlines
+#plt.style.use('dark_background')  # Clean white background, no gridlines
 
 # File paths for Sonora models
 model_files = {
@@ -14,8 +14,9 @@ model_files = {
 # File paths for Baraffe models
 baraffe_files = {
     'Age = 1 Gyr': 'baraffe_1gyr.csv',
-    'Age =  5 Gyr': 'baraffe_5gyr.csv',
-    'Age =  3 Gyr': 'baraffe_3gyr_interpolated.csv'
+
+    'Age =  3 Gyr': 'baraffe_3gyr_interpolated.csv',
+        'Age =  5 Gyr': 'baraffe_5gyr.csv'
 }
 
 # Read Sonora models
@@ -63,31 +64,32 @@ custom_colors = {
 # Linestyles and colors for Baraffe models
 baraffe_styles = {
     'Age = 1 Gyr': ':',
-    'Age =  5 Gyr': '--',
-    'Age =  3 Gyr': '-'
+  
+    'Age =  3 Gyr': '-',
+        'Age =  5 Gyr': '--'
 }
 baraffe_colors = {
-    'Age = 1 Gyr': '#9467bd',
-    'Age =  5 Gyr': '#8c564b',
-    'Age =  3 Gyr': '#009E73'
+    'Age = 1 Gyr': 'black',    # Use basic green
+   # Use orange
+    'Age =  3 Gyr': 'green' ,
+        'Age =  5 Gyr': 'orange',     # Use red
 }
-
 # Plot
-fig, ax = plt.subplots(figsize=(14, 10))
+fig, ax = plt.subplots(figsize=(14, 12))
 
 # Plot Sonora models
-for label, df in model_dfs.items():
-    for target_age in target_ages:
-        if label != '[M/H] = 0.0' and target_age != 3:
-            continue
-        nearest_age = df['age(Gyr)'].sub(target_age).abs().idxmin()
-        age_value = df.loc[nearest_age, 'age(Gyr)']
-        df_nearest = df[df['age(Gyr)'] == age_value]
-        linestyle = metallicity_styles[label]
-        color = custom_colors.get((label, target_age), 'black')
-        ax.plot(df_nearest['M/MSun'] * 1047.56, df_nearest['R/Rsun'] * 9.731,
-                linestyle=linestyle, color=color,
-                label=f'{label}, Age = {age_value:.2f} Gyr, Sonora Bobcat Model (2021) ', lw=2)
+#for label, df in model_dfs.items():
+#    for target_age in target_ages:
+#        if label != '[M/H] = 0.0' and target_age != 3:
+#            continue
+#        nearest_age = df['age(Gyr)'].sub(target_age).abs().idxmin()
+#        age_value = df.loc[nearest_age, 'age(Gyr)']
+#        df_nearest = df[df['age(Gyr)'] == age_value]
+#        linestyle = metallicity_styles[label]
+#        color = custom_colors.get((label, target_age), 'black')
+#        ax.plot(df_nearest['M/MSun'] * 1047.56, df_nearest['R/Rsun'] * 9.731,
+#                linestyle=linestyle, color=color,
+#                label=f'{label}, Age = {age_value:.2f} Gyr, Sonora Bobcat Model (2021) ', lw=2)
 
 # Plot Baraffe models
 for label, df in baraffe_dfs.items():
@@ -98,15 +100,15 @@ for label, df in baraffe_dfs.items():
 # Plot brown dwarfs
 ax.errorbar(browndwarf_mass[bd_mask], browndwarf_radius[bd_mask],
             xerr=browndwarf_mass_err[bd_mask], yerr=browndwarf_radius_err[bd_mask],
-            fmt='o', color='gray', markersize=3,
-            ecolor='gray', elinewidth=0.7, capsize=2,
+            fmt='o', color='blue', markersize=6,
+            ecolor='blue', elinewidth=0.7, capsize=2,
             label='Transiting Brown Dwarfs')
 
 # Plot low mass stars with different marker
 ax.errorbar(browndwarf_mass[star_mask], browndwarf_radius[star_mask],
             xerr=browndwarf_mass_err[star_mask], yerr=browndwarf_radius_err[star_mask],
-            fmt='*', color='gray', markersize=10,
-            ecolor='gray', elinewidth=0.7, capsize=2,
+            fmt='*', color='#8B006A', markersize=12,
+            ecolor='#8B006A', elinewidth=0.7, capsize=2,
             label='Low-Mass Stars')
 
 # Plot TOI 2155 b
@@ -119,37 +121,36 @@ yerr = [radius_err_lower, radius_err_upper]
 
 ax.errorbar(planet_mass, planet_radius,
             xerr=mass_err, yerr=yerr,
-            fmt='o', color='#d62728', markersize=8,
+            fmt='o', color='#d62728', markersize=6,
             ecolor='#d62728', elinewidth=1.2, capsize=2,
             label='TOI 2155b')
 
 # Region separators
 ax.axvline(x=12, color='red', linestyle='--')
-ax.axvline(x=42, color='red', linestyle='--')
+#ax.axvline(x=42, color='red', linestyle='--')
 ax.axvline(x=84, color='red', linestyle='--')
 
-ax.text(13, 1.450, 'Low-mass Brown dwarfs', fontsize=13, fontweight='bold')
-ax.text(45, 1.450, 'Massive Brown dwarfs', fontsize=13, fontweight='bold')
-ax.text(86, 1.450, 'Low Mass Stars', fontsize=13, fontweight='bold')
+#ax.text(13, 1.450, 'Low-mass Brown dwarfs', fontsize=13, fontweight='bold')
+ax.text(45, 1.450, 'Brown dwarfs', fontsize=20, fontweight='bold')
+ax.text(86, 1.450, 'Low Mass Stars', fontsize=20, fontweight='bold')
 
 # Axis labels and formatting
-ax.set_xlabel('Mass [$M_\\mathrm{J}$]', fontsize=14)
-ax.set_ylabel('Radius [$R_\\mathrm{J}$]', fontsize=14)
+ax.set_xlabel('Mass [$M_\\mathrm{J}$]', fontsize=20)
+ax.set_ylabel('Radius [$R_\\mathrm{J}$]', fontsize=20)
 ax.set_xlim(8, 105)
-ax.set_ylim(0.5, 1.6)
+ax.set_ylim(0.5, 1.8)
 ax.tick_params(axis='both', which='major', labelsize=11, direction='out', length=6, width=1)
 ax.tick_params(axis='both', which='minor', direction='out', length=3, width=0.8)
 ax.minorticks_on()
 
 # Legend
-legend = ax.legend(fontsize=7.5, frameon=True, loc='best')
+legend = ax.legend(fontsize=11, frameon=True, loc='best')
 legend.get_frame().set_edgecolor('gray')
 legend.get_frame().set_alpha(0.6)
 
 plt.tight_layout()
-plt.savefig('TOI2155_evolution_dark.png', format='png', dpi=400, bbox_inches='tight')
+plt.savefig('TOI2155_evolution.png', format='png', dpi=400, bbox_inches='tight')
 plt.show()
-
 
 
 
