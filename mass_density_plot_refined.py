@@ -6,7 +6,7 @@ from matplotlib import rcParams
 # ---------------------------
 # Plot Aesthetics
 # ---------------------------
-# plt.style.use('dark_background')
+plt.style.use('seaborn-v0_8-white')
 params = {
     'legend.fontsize': 12,
     'axes.labelsize': 12,
@@ -31,8 +31,8 @@ df = pd.read_csv(browndwarf_file)
 
 # Extract columns
 mass = df['Mj']
-
-
+mass_err_upper = df['Mj_err1']
+mass_err_lower = df['Mj_err2']
 density = df['Density_cgs']
 density_err_upper = df['Density_err_upper_cgs']
 density_err_lower = df['Density_err_lower_cgs']
@@ -44,6 +44,7 @@ temperature = df['Teff']
 # ---------------------------
 fig, ax = plt.subplots(figsize=(14, 10))
 
+# Main scatter plot (Brown dwarfs)
 scatter = ax.scatter(
     mass, density,
     edgecolors='none',
@@ -55,86 +56,118 @@ scatter = ax.scatter(
 
 # Colorbar
 clb = plt.colorbar(scatter, ax=ax, orientation='vertical')
-clb.set_label('Temperature (K)', labelpad=15, rotation=270)
+clb.set_label('Temperature (K)', labelpad=15, rotation=270, fontsize=20)
 
-# Asymmetric error bars
+# Asymmetric error bars for brown dwarfs
 ax.errorbar(
     mass,
     density,
-    xerr=[df['Mj_err2'], df['Mj_err1']],  # lower and upper errors for mass
+    xerr=[mass_err_lower, mass_err_upper],
     yerr=[density_err_lower, density_err_upper],
     linestyle='None',
     color='gray',
     alpha=0.7,
     capsize=5
 )
- 
-# Labels and limits
-ax.set_xlabel('Mass [$M_{J}$]')
-ax.set_ylabel('Density [g cm$^{-3}$]')
-ax.set_xlim(0, 120)
-ax.set_ylim(-30, max(density + density_err_upper)*1.1)
 
-# Reference vertical line at 94 Mj
+# Plot low-mass stars (masses > 84 Mj)
+star_mask = mass > 84
+
+# Error bars for stars
+ax.errorbar(
+    mass[star_mask], density[star_mask],
+    xerr=[mass_err_lower[star_mask], mass_err_upper[star_mask]],
+    yerr=[density_err_lower[star_mask], density_err_upper[star_mask]],
+    linestyle='None',
+    ecolor='gray',
+    elinewidth=0.7,
+    capsize=2,
+    alpha=0.7
+)
+
+# Scatter stars with color following temperature
+scatter_stars = ax.scatter(
+    mass[star_mask], density[star_mask],
+    marker='*',
+    c=temperature[star_mask],
+    cmap='jet',
+    s=160,  # Adjust star size
+    edgecolors='black',
+    linewidths=0.7,
+    label='Low-Mass Stars'
+)
+
+# Labels and limits
+ax.set_xlabel('Mass [$M_{J}$]', fontsize=20)
+ax.set_ylabel('Density [g cm$^{-3}$]', fontsize=20)
+ax.set_xlim(0, 120)
+ax.set_ylim(-30, max(density + density_err_upper) * 1.1)
+
+# Reference vertical lines
 ax.axvline(x=12, color='red', linestyle='--')
-ax.axvline(x=42, color='red', linestyle='--')
+# ax.axvline(x=42, color='red', linestyle='--')
 ax.axvline(x=84, color='red', linestyle='--')
-ax.text(13, max(density) + 45, 'Low-mass Brown dwarfs', fontsize=13, fontweight='bold')
-ax.text(45, max(density) +45, 'Massive Brown dwarfs', fontsize=13, fontweight='bold')
-ax.text(86, max(density) + 45, 'Low Mass Stars', fontsize=13, fontweight='bold')
+# ax.text(13, max(density) + 45, 'Low-mass Brown dwarfs', fontsize=13, fontweight='bold')
+ax.text(45, max(density) + 45, ' Brown dwarfs', fontsize=20, fontweight='bold')
+ax.text(86, max(density) + 45, 'Low Mass Stars', fontsize=20, fontweight='bold')
 
 # Annotate TOI-2155b if present
 if 'TOI-2155b' in df['Name'].values:
     idx = df[df['Name'] == 'TOI-2155b'].index[0]
-    # Plot TOI-2155b with a special marker and colormap color
     toi_color = plt.cm.jet((temperature[idx] - min(temperature)) / (max(temperature) - min(temperature)))
 
-    
-    
-    ax.scatter(
-    mass[idx], density[idx],
-    s=radius[idx] * 25,
-    color=toi_color,  # color following temperature color bar
-    marker='o',
-
-    linewidths=1.2,
-    zorder=5
-)
-
-# Overlay the 'x' marker
     ax.scatter(
         mass[idx], density[idx],
-        s=radius[idx] * 20,  # slightly smaller so it sits nicely inside the circle
+        s=radius[idx] * 25,
+        color=toi_color,
+        marker='o',
+        linewidths=1.2,
+        zorder=5
+    )
+
+    ax.scatter(
+        mass[idx], density[idx],
+        s=radius[idx] * 20,
         color='red',
         marker='x',
         linewidths=1.5,
         zorder=6,
         label='TOI-2155b'
     )
-    
 
     ax.annotate(
         '',
         xy=(mass[idx], density[idx]),
-        xytext=(mass[idx] + 4, density[idx] + (max(density)*0.15)),
+        xytext=(mass[idx] + 4, density[idx] + (max(density) * 0.15)),
         arrowprops=dict(arrowstyle='->', color='red', linewidth=2)
     )
-    ax.text(mass[idx], density[idx] + (max(density)*0.1), 'TOI-2155b', fontsize=8, fontweight='bold', ha='center')
+    ax.text(mass[idx], density[idx] + (max(density) * 0.1), 'TOI-2155b', fontsize=20, fontweight='bold', ha='center')
 
 # Radius size legend
-desired_radii = np.array([0.5, 0.7, 0.9, 1.0, 1.5, 2.0,3.0])
+desired_radii = np.array([0.5, 0.7, 0.9, 1.0, 1.5, 2.0, 3.0])
 desired_sizes = desired_radii * 40
 
 handles = [
-    plt.scatter([], [], s=size, edgecolor='none', c='gray', alpha=0.6)
+    plt.scatter([], [], s=size, edgecolor='none', c='gray', alpha=0.9)
     for size in desired_sizes
 ]
 labels = [f'{r} $R_J$' for r in desired_radii]
 
-ax.legend(handles, labels, loc="upper right", title="Radius [$R_{J}$]", fontsize=12)
+
+
+
+
+
+
+
+
+
+ax.legend(handles, labels, loc="upper left", title="Radius [$R_{J}$]", fontsize=20)
+
+
 
 plt.tight_layout()
-#plt.savefig('brown_dwarf_density_plot_dark.png', dpi=300, bbox_inches='tight')
+plt.savefig('mass_density_plot.png', dpi=400, bbox_inches='tight')
 plt.show()
 
 
