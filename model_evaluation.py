@@ -22,8 +22,8 @@ print("Time shape for the run is", time.shape)
 
 # === Retrieve the best-fit model and baseline from the posterior ===
 # `xx=time` means we want the model evaluated at these specific time points
-model = alles.get_one_posterior_model(inst, key, xx=time)
-baseline = alles.get_one_posterior_baseline(inst, key, xx=time)
+model = alles.get_posterior_median_baseline(inst, key, xx=time)
+baseline = alles.get_posterior_median_baseline(inst, key, xx=time)
 print("Model shape for the run is", model.shape)
 
 
