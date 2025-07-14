@@ -36,7 +36,7 @@ flux = data['RV']
 flux_err = data['RV_err']
 
 # === Phase-fold the data using known period and T0 ===
-phases = foldAt(time, 3.7246960, T0=2459891.63476)  # Period and T0 from your fit
+phases = foldAt(time, 3.7246939, T0=2459891.63489)  # Period and T0 from your fit
 
 # Sort data by phase for clean plotting
 sortIndi = np.argsort(phases)
@@ -45,8 +45,8 @@ flux = flux[sortIndi]
 flux_err = flux_err[sortIndi]
 
 # === Load the model and residuals from CSV ===
-modelcsv = pd.read_csv("RV_model_test.csv")
-model = modelcsv['model']
+modelcsv = pd.read_csv("jul11_with_RM_RV_model.csv")
+model = modelcsv['model_rv']
 modeltime = modelcsv['model_time']
 baseline = modelcsv['baseline']
 residuals = modelcsv['residuals']
@@ -68,7 +68,7 @@ gs = gridspec.GridSpec(2, 1, height_ratios=[5, 2])  # Two vertically stacked sub
 
 # --- Top plot: Radial velocity data and model ---
 ax0 = plt.subplot(gs[0])
-ax0.plot(phase_model, model, 'r', alpha=1, label="Model (GP Matérn 3/2)", zorder=2)
+ax0.plot(phase_model, model, 'r', alpha=1, label="Model (Allesfitter)", zorder=2)
 ax0.errorbar(phases, flux, flux_err, fmt='b.', alpha=1, label="Data (TRES)",
              markersize=3, capsize=2, zorder=1)
 
@@ -89,6 +89,8 @@ ax1.set_ylabel("Residuals")
 plt.tight_layout()
 plt.savefig('RVplot_phase.png', dpi=400)  # Save figure as high-res image
 plt.show()                                # Display the plot
+
+
 
 
 
