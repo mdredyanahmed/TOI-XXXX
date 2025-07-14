@@ -1,5 +1,3 @@
-
-# === Imports ===
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -33,20 +31,21 @@ flux = data['flux'].values
 flux_err = data['flux_err'].values
 
 # === Load model output from allesfitter ===
-modelcsv = pd.read_csv("model_allsector_tess.csv")
+modelcsv = pd.read_csv("without_gp_model_tess_allsector.csv")
 model_time = modelcsv['time'].values
+print(model_time[:5])
 model = modelcsv['model'].values           # full model = transit + baseline
 baseline = modelcsv['baseline'].values     # GP/systematics-only component
 
 # === Having relative flux by removing baseline ===
 # Here we subtract the baseline 
 
-flux_corrected = flux - baseline
+flux_corrected = flux-baseline
 flux_err_corrected = flux_err  # assuming uncertainty remains the same
 
 # === Phase-fold observed light curve ===
-period = 3.7246960
-T0 = 2459891.63476  # BJD_TDB
+period = 3.7246948
+T0 = 2459891.63477 # BJD_TDB
 
 phases = foldAt(time, period, T0=T0, centralzero=True)
 sortIndi = np.argsort(phases)
@@ -92,10 +91,10 @@ ax0 = plt.subplot(gs[0])
 ax0.scatter(phases, flux_corrected, color='#E69F00', alpha=0.4, s=8, label="Data (TESS - SPOC)")
 ax0.errorbar(bin_centers, binned_flux, yerr=binned_flux_err, fmt='o',
              markersize=2, capsize=0.5, color='#0072B2', alpha=1, label='10-minute-binned', zorder=1)
-ax0.plot(phases_model, model_smooth, 'r-', lw=1, alpha=1, label="Model (GP matern 3/2)", zorder=2)
+ax0.plot(phases_model, model_smooth, 'r-', lw=1, alpha=1, label="Model (Allesfitter)", zorder=2)
 
 ax0.set_xlim(-0.04, 0.04)
-ax0.set_ylabel("Relative Flux - Baseline", fontsize=16)
+ax0.set_ylabel("Relative Flux - Baseline", fontsize=20)
 ax0.legend(ncol=2, loc='upper left', frameon=False)
 ax0.minorticks_on()
 
@@ -107,14 +106,15 @@ residuals = residuals[sortIndi]        # apply same sorting as phase
 
 ax1.scatter(phases, residuals, c='#E69F00', s=8, alpha=0.4)
 ax1.axhline(0, color='grey', linestyle='--', lw=1)
-ax1.set_ylabel("Residuals", fontsize=16)
-ax1.set_xlabel("Phase", fontsize=16)
+ax1.set_ylabel("Residuals", fontsize=20)
+ax1.set_xlabel("Phase", fontsize=20)
 ax1.minorticks_on()
 
 # === Show/save ===
 plt.tight_layout()
 plt.savefig("phaseplot_TESS_binned.png", dpi=600, bbox_inches='tight')
 plt.show()
+
 
 # # Import necessary packages
 # from PyAstronomy.pyasl import foldAt             # For phase-folding time series data
