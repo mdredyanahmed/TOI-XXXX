@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
+import matplotlib.patches as patches
 
 # === Load model and data files ===
 model_files = {
@@ -71,28 +72,42 @@ ax.fill_between(
 # === Brown dwarfs and stars ===
 ax.errorbar(browndwarf_mass[bd_mask], browndwarf_radius[bd_mask],
             xerr=browndwarf_mass_err[bd_mask], yerr=browndwarf_radius_err[bd_mask],
-            fmt='o', color='gray', markersize=2, ecolor='gray', elinewidth=0.5, capsize=2,
+            fmt='o', color='gray', markersize=3, ecolor='gray', elinewidth=0.5, capsize=2,
             label='Transiting Brown Dwarfs', alpha=0.6)
 ax.errorbar(browndwarf_mass[star_mask], browndwarf_radius[star_mask],
             xerr=browndwarf_mass_err[star_mask], yerr=browndwarf_radius_err[star_mask],
-            fmt='*', color='gray', markersize=5, ecolor='gray', elinewidth=0.5, capsize=2,
+            fmt='*', color='gray', markersize=7, ecolor='gray', elinewidth=0.5, capsize=2,
             label='Low-Mass Stars', alpha=0.6)
 
 # === TOI-2155 b ===
-planet_mass, planet_radius = 80.5,  0.975
+planet_mass, planet_radius = 80.5, 0.975
 mass_err, radius_err_lower, radius_err_upper = 1.1, [0.008], [0.008]
-ax.errorbar(planet_mass, planet_radius,
-            xerr=mass_err, yerr=[radius_err_lower, radius_err_upper],
-            fmt='o', color='#d62728', markersize=2,
-            ecolor='#d62728', elinewidth=0.5, capsize=1,
-           
-            label='TOI-2155b')
 
-# === TOI-2155b Annotation (offset from error bars) ===
+# Error bars only
+ax.errorbar(
+    planet_mass, planet_radius,
+    xerr=mass_err, yerr=[radius_err_lower, radius_err_upper],
+    fmt='none', ecolor='red', elinewidth=1, capsize=2, zorder=2,label='TOI-2155b'
+)
+
+# Annotate TOI-2155b
 ax.annotate('TOI-2155b', xy=(planet_mass, planet_radius),
             xytext=(planet_mass + 5, planet_radius + 0.2),
             arrowprops=dict(facecolor='black', arrowstyle='->', lw=0.5),
-            fontsize=12, fontweight='bold')
+            fontsize=12, fontweight='bold',label='TOI-2155b')
+
+# === Add red rectangle around TOI-2155b ===
+rect = patches.Rectangle(
+    (78.5, 0.93),  # lower left corner (mass, radius)
+    width=4.5,     # mass range
+    height=0.1,    # radius range
+    linewidth=1.5,
+    edgecolor='black',
+    linestyle='--',
+    facecolor='none',
+    zorder=4
+)
+ax.add_patch(rect)
 
 # === Decorations ===
 ax.axvline(x=13, color='red', linestyle='--')
