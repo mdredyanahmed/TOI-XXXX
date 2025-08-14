@@ -1,119 +1,178 @@
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
-import matplotlib as mpl
-from PyAstronomy.pyasl import foldAt
-from scipy.interpolate import interp1d
+from matplotlib.gridspec import GridSpec
+from allesfitter import allesclass
 
-# === Plot style for publication ===
-mpl.rcParams.update({
-    'font.size': 14,
-    'font.family': 'serif',
-    'axes.labelsize': 16,
-    'axes.titlesize': 18,
-    'xtick.labelsize': 14,
-    'ytick.labelsize': 14,
-    'legend.fontsize': 14,
-    'axes.linewidth': 1.2,
-    'xtick.direction': 'out',
-    'ytick.direction': 'out',
-    'xtick.top': True,
-    'ytick.right': True,
-    'grid.alpha': 0.3,
-    'grid.linestyle': '--'
-})
+# Load your fit results
+alles = allesclass('allesfit_eccentric_model')
 
-# === Load TESS photometric data ===
-data = pd.read_csv("TESS.csv")
-time = data['#time'].values
-flux = data['flux'].values
-flux_err = data['flux_err'].values
+# Choose just TESS
+instrument = 'TESS'
+companion = 'b'
 
-# === Load model output from allesfitter ===
-modelcsv = pd.read_csv("without_gp_model_tess_allsector.csv")
-model_time = modelcsv['time'].values
-print(model_time[:5])
-model = modelcsv['model'].values           # full model = transit + baseline
-baseline = modelcsv['baseline'].values     # GP/systematics-only component
+# Set up figure and shared axes
+fig = plt.figure(figsize=(8, 8))
+gs = GridSpec(2, 1, height_ratios=[3, 1], hspace=0)
 
-# === Having relative flux by removing baseline ===
-# Here we subtract the baseline 
+ax_top = fig.add_subplot(gs[0])
+ax_bot = fig.add_subplot(gs[1], sharex=ax_top)
+ax_top.tick_params(labelbottom=False)
+# Plot phase-folded light curve and residuals
+alles.plot(instrument, companion, 'phase', ax=ax_top)
+alles.plot(instrument, companion, 'phase_residuals', ax=ax_bot)
+#for ax in [ax_top, ax_bot]:
+  #  for line in ax.lines:
+ #	 if 'binned' in line.get_label().lower():  # Usually contains 'binned'
 
-flux_corrected = flux-baseline
-flux_err_corrected = flux_err  # assuming uncertainty remains the same
+for ax in [ax_top, ax_bot]:
+    for line in ax.get_lines():
+        if 'binned' in line.get_label().lower():
+            line.set_markersize(0.5)  # change to your preferred sizeline.set_markersize(0.5)  # Smaller $
 
-# === Phase-fold observed light curve ===
-period = 3.7246948
-T0 = 2459891.63477 # BJD_TDB
+ax_top.legend().set_visible(False)
+legend = ax_top.get_legend()
+if legend:
+    legend.remove()
 
-phases = foldAt(time, period, T0=T0, centralzero=True)
-sortIndi = np.argsort(phases)
+# Remove any rogue text annotations
+for txt in ax_top.texts:
+    txt.set_visible(False)
+# Styling
+ax_top.set_title(f'a) {instrument}', fontsize=18, loc='center')
+ax_top.set_ylabel('Relative Flux - Baseline',fontsize=20)
+ax_bot.set_ylabel('Residuals',fontsize=20)
+ax_bot.set_xlabel('Phase',fontsize=20)
+legend = ax_top.get_legend()
+if legend:
+    legend.remove()
 
-phases = phases[sortIndi]
-flux_corrected = flux_corrected[sortIndi]
-flux_err_corrected = flux_err_corrected[sortIndi]
+# Remove any rogue text annotations
+for txt in ax_top.texts:
+    txt.set_visible(False)
+ax_bot.set_title("")
+# Shared x-axis zoom
+ax_bot.set_xlim(-0.05, 0.05)
 
-# === Phase-fold model for  plotting ===
-phases_model = foldAt(model_time, period, T0=T0, centralzero=True)
-sortIndi_model = np.argsort(phases_model)
-phases_model = phases_model[sortIndi_model]
-model_smooth = model[sortIndi_model]
-
-# === Bin data in phase (10-minute bins) ===
-bin_width_minutes = 10
-bin_width_phase = (bin_width_minutes / 60.0) / 24.0 / period  # convert to phase units
-
-bins = np.arange(phases.min(), phases.max() + bin_width_phase, bin_width_phase)
-bin_centers = 0.5 * (bins[1:] + bins[:-1])
-digitized = np.digitize(phases, bins)
-
-binned_flux, binned_flux_err = [], []
-for i in range(1, len(bins)):
-    in_bin = digitized == i
-    if np.any(in_bin):
-        weights = 1.0 / flux_err_corrected[in_bin]**2
-        binned_flux.append(np.average(flux_corrected[in_bin], weights=weights))
-        binned_flux_err.append(np.sqrt(1.0 / np.sum(weights)))
-    else:
-        binned_flux.append(np.nan)
-        binned_flux_err.append(np.nan)
-
-binned_flux = np.array(binned_flux)
-binned_flux_err = np.array(binned_flux_err)
-
-# === Create figure with two panels (light curve + residuals) ===
-fig = plt.figure(figsize=(8, 10))
-gs = gridspec.GridSpec(2, 1, height_ratios=[5, 2], hspace=0.1)
-
-# === Top panel: Phase-folded light curve ===
-ax0 = plt.subplot(gs[0])
-ax0.scatter(phases, flux_corrected, color='#E69F00', alpha=0.4, s=8, label="Data (TESS - SPOC)")
-ax0.errorbar(bin_centers, binned_flux, yerr=binned_flux_err, fmt='o',
-             markersize=2, capsize=0.5, color='#0072B2', alpha=1, label='10-minute-binned', zorder=1)
-ax0.plot(phases_model, model_smooth, 'r-', lw=1, alpha=1, label="Model (Allesfitter)", zorder=2)
-
-ax0.set_xlim(-0.04, 0.04)
-ax0.set_ylabel("Relative Flux - Baseline", fontsize=20)
-ax0.legend(ncol=2, loc='upper left', frameon=False)
-ax0.minorticks_on()
-
-# === Bottom panel: Residuals ===
-ax1 = plt.subplot(gs[1], sharex=ax0)
-
-residuals = flux - (model + baseline)  # observed minus full model
-residuals = residuals[sortIndi]        # apply same sorting as phase
-
-ax1.scatter(phases, residuals, c='#E69F00', s=8, alpha=0.4)
-ax1.axhline(0, color='grey', linestyle='--', lw=1)
-ax1.set_ylabel("Residuals", fontsize=20)
-ax1.set_xlabel("Phase", fontsize=20)
-ax1.minorticks_on()
-
-# === Show/save ===
+# Tidy layout
 plt.tight_layout()
-plt.savefig("phaseplot_TESS_binned.png", dpi=600, bbox_inches='tight')
-plt.show()
+plt.savefig("TESS_shared_axis.png", dpi=600)
+
+
+# import numpy as np
+# import pandas as pd
+# import matplotlib.pyplot as plt
+# from matplotlib import gridspec
+# import matplotlib as mpl
+# from PyAstronomy.pyasl import foldAt
+# from scipy.interpolate import interp1d
+
+# # === Plot style for publication ===
+# mpl.rcParams.update({
+#     'font.size': 14,
+#     'font.family': 'serif',
+#     'axes.labelsize': 16,
+#     'axes.titlesize': 18,
+#     'xtick.labelsize': 14,
+#     'ytick.labelsize': 14,
+#     'legend.fontsize': 14,
+#     'axes.linewidth': 1.2,
+#     'xtick.direction': 'out',
+#     'ytick.direction': 'out',
+#     'xtick.top': True,
+#     'ytick.right': True,
+#     'grid.alpha': 0.3,
+#     'grid.linestyle': '--'
+# })
+
+# # === Load TESS photometric data ===
+# data = pd.read_csv("TESS.csv")
+# time = data['#time'].values
+# flux = data['flux'].values
+# flux_err = data['flux_err'].values
+
+# # === Load model output from allesfitter ===
+# modelcsv = pd.read_csv("without_gp_model_tess_allsector.csv")
+# model_time = modelcsv['time'].values
+# print(model_time[:5])
+# model = modelcsv['model'].values           # full model = transit + baseline
+# baseline = modelcsv['baseline'].values     # GP/systematics-only component
+
+# # === Having relative flux by removing baseline ===
+# # Here we subtract the baseline 
+
+# flux_corrected = flux-baseline
+# flux_err_corrected = flux_err  # assuming uncertainty remains the same
+
+# # === Phase-fold observed light curve ===
+# period = 3.7246948
+# T0 = 2459891.63477 # BJD_TDB
+
+# phases = foldAt(time, period, T0=T0, centralzero=True)
+# sortIndi = np.argsort(phases)
+
+# phases = phases[sortIndi]
+# flux_corrected = flux_corrected[sortIndi]
+# flux_err_corrected = flux_err_corrected[sortIndi]
+
+# # === Phase-fold model for  plotting ===
+# phases_model = foldAt(model_time, period, T0=T0, centralzero=True)
+# sortIndi_model = np.argsort(phases_model)
+# phases_model = phases_model[sortIndi_model]
+# model_smooth = model[sortIndi_model]
+
+# # === Bin data in phase (10-minute bins) ===
+# bin_width_minutes = 10
+# bin_width_phase = (bin_width_minutes / 60.0) / 24.0 / period  # convert to phase units
+
+# bins = np.arange(phases.min(), phases.max() + bin_width_phase, bin_width_phase)
+# bin_centers = 0.5 * (bins[1:] + bins[:-1])
+# digitized = np.digitize(phases, bins)
+
+# binned_flux, binned_flux_err = [], []
+# for i in range(1, len(bins)):
+#     in_bin = digitized == i
+#     if np.any(in_bin):
+#         weights = 1.0 / flux_err_corrected[in_bin]**2
+#         binned_flux.append(np.average(flux_corrected[in_bin], weights=weights))
+#         binned_flux_err.append(np.sqrt(1.0 / np.sum(weights)))
+#     else:
+#         binned_flux.append(np.nan)
+#         binned_flux_err.append(np.nan)
+
+# binned_flux = np.array(binned_flux)
+# binned_flux_err = np.array(binned_flux_err)
+
+# # === Create figure with two panels (light curve + residuals) ===
+# fig = plt.figure(figsize=(8, 10))
+# gs = gridspec.GridSpec(2, 1, height_ratios=[5, 2], hspace=0.1)
+
+# # === Top panel: Phase-folded light curve ===
+# ax0 = plt.subplot(gs[0])
+# ax0.scatter(phases, flux_corrected, color='#E69F00', alpha=0.4, s=8, label="Data (TESS - SPOC)")
+# ax0.errorbar(bin_centers, binned_flux, yerr=binned_flux_err, fmt='o',
+#              markersize=2, capsize=0.5, color='#0072B2', alpha=1, label='10-minute-binned', zorder=1)
+# ax0.plot(phases_model, model_smooth, 'r-', lw=1, alpha=1, label="Model (Allesfitter)", zorder=2)
+
+# ax0.set_xlim(-0.04, 0.04)
+# ax0.set_ylabel("Relative Flux - Baseline", fontsize=20)
+# ax0.legend(ncol=2, loc='upper left', frameon=False)
+# ax0.minorticks_on()
+
+# # === Bottom panel: Residuals ===
+# ax1 = plt.subplot(gs[1], sharex=ax0)
+
+# residuals = flux - (model + baseline)  # observed minus full model
+# residuals = residuals[sortIndi]        # apply same sorting as phase
+
+# ax1.scatter(phases, residuals, c='#E69F00', s=8, alpha=0.4)
+# ax1.axhline(0, color='grey', linestyle='--', lw=1)
+# ax1.set_ylabel("Residuals", fontsize=20)
+# ax1.set_xlabel("Phase", fontsize=20)
+# ax1.minorticks_on()
+
+# # === Show/save ===
+# plt.tight_layout()
+# plt.savefig("phaseplot_TESS_binned.png", dpi=600, bbox_inches='tight')
+# plt.show()
 
 
 # # Import necessary packages
